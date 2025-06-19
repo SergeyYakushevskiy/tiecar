@@ -3,22 +3,17 @@ package dstu.csae.rs_code;
 import dstu.csae.codec.Codec;
 import dstu.csae.galois.GaloisField;
 import dstu.csae.galois.extended.GaloisFieldExtension;
-import dstu.csae.mathutils.MathUtils;
 import dstu.csae.polynomial.FieldPolynomial;
 import dstu.csae.utils.BerlekampMassey;
 import dstu.csae.utils.Chien;
 import dstu.csae.utils.Forney;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
 
 public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
 
-    private static final Logger logger = LogManager.getLogger(RSFCoder.class);
 
     public RSFCoder(RSCode code) {
         super(code);
@@ -33,18 +28,15 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
                 "Степень полинома %s должна быть меньше k = %d", input, k
             ));
         }
-        logger.info("КОДИРОВАНИЕ");
         int n = code.getN();
         GaloisFieldExtension field = code.getField();
         int alpha = code.getAlpha();
         int[] encoded = new int[n];
-        logger.info("Принятый полином: {}", input);
         for(int i = 0; i < n; i ++){
             int power = field.powMod(alpha, i);
             encoded[i] = input.evaluate(power);
         }
         FieldPolynomial output = new FieldPolynomial(field, encoded);
-        logger.info("Закодированный полином: {}", output);
         return output;
     }
 
@@ -57,8 +49,6 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
                     "Степень полинома %s долна быть меньше n = %d", input, n
             ));
         }
-        logger.info("ДЕКОДИРОВАНИЕ");
-        logger.info("Принятый полином: {}", input);
         GaloisFieldExtension field = input.getField();
         int[] syndromes = computeSyndromes(input);
         boolean allZero = true;
@@ -68,27 +58,20 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
                 break;
             }
         }
-        logger.info("Синдромы: {}", Arrays.toString(syndromes));
         if (allZero) {
             FieldPolynomial output = getInformationalCoefficients(input);
-            logger.info("Восстановленный полином: {}", output);
             return output;
         }
         FieldPolynomial errorLocatorPolynomial = BerlekampMassey.findErrorLocatorPolynomial(field, syndromes);
-        logger.info("Локатор ошибок: {}", errorLocatorPolynomial);
         int[] errorPositions = Chien.findErrorPositions(code, errorLocatorPolynomial);
-        logger.info("Позиции ошибок: {}", Arrays.toString(errorPositions));
         int[] errorValues = Forney.forneyAlgorithm(
                 code,
                 new FieldPolynomial(field, syndromes),
                 errorLocatorPolynomial,
                 errorPositions
         );
-        logger.info("Значения ошибок: {}", Arrays.toString(errorValues));
         input = correctErrors(input, errorPositions, errorValues);
-        logger.info("Полином после исправления ошибок: {}", input);
         FieldPolynomial output = getInformationalCoefficients(input);
-        logger.info("Восстановленный полином: {}", output);
         return output;
     }
 
@@ -100,7 +83,6 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
         int alpha = code.getAlpha();
         int invAlpha = fieldExtension.inverseOfMultiplication(alpha);
         int invN = field.inverseOfMultiplication(field.bringToField(n));
-        logger.info(invN);
         int[] decoded = new int[n];
 
         for(int i = 0; i < k; i ++){

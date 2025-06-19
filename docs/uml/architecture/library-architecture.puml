@@ -1,0 +1,35 @@
+@startuml
+title Архитектура библиотеки для РС-кодов
+
+package "code" {
+    interface Code
+}
+
+package "codec" {
+    abstract class Codec
+}
+
+package "polynomial" {
+    class FieldPolynomial
+}
+
+package "rs_code" {
+    class RSCode
+    class RSFCoder
+}
+
+package "utils" {
+    class BerlekampMassey
+
+    class Chien
+    class Forney
+}
+
+"codec" ..> "code" : использует\nCode
+"rs_code" ..> "codec" : использует\nинтерфейс Codec
+"rs_code" ..> "code" : имплементирует\nинтерфейс Code
+"rs_code" ..> "polynomial" : использует\nFieldPolynomial
+"codec" ..> "polynomial" : использует\nFieldPolynomial
+"codec" ..> "utils" : использует алгоритмы\nдекодирования
+
+@enduml

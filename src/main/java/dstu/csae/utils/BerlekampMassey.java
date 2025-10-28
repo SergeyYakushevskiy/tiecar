@@ -16,39 +16,33 @@ public class BerlekampMassey {
         int L = 0;
         int m = 1;
         int b = 1;
-        for(int n = 0; n < N; n ++){
+        for(int n = 0; n < N; n ++) {
             int d = syndrome[n];
             for(int j = 1; j <= L; j ++){
-                if(n - j < 0){
-                    continue;
-                }
-                d = field.add(d, field.multiply(syndrome[n - j], C[j]));
+                int monomial = field.multiply(C[j], syndrome[n - j]);
+                d = field.add(d, monomial);
             }
-            if(d == 0){
+            if (d == 0) {
                 m++;
                 continue;
             }
-
             int[] T = Arrays.copyOf(C, C.length);
             int coefficient = field.divide(d, b);
-            int[] scaled = new int[N];
-            for(int i = 0; i < B.length; i ++) {
-                if(i + m >= N){
-                    continue;
-                }
-                scaled[i + m] = field.multiply(coefficient, B[i]);
+            int[] scale = new int[B.length + m];
+            for(int j = 0; j < B.length; j ++){
+                scale[j + m] = field.inverseOfAddition(field.multiply(coefficient, B[j]));
             }
-            for(int i = 0; i < C.length; i ++) {
-                C[i] = field.subtract(C[i], scaled[i]);
+            for(int j = 0; j < C.length; j ++){
+                scale[j] = field.add(C[j], scale[j]);
             }
-
+            C = scale;
             if (2 * L <= n) {
-                L = n + 1 - L;
                 B = T;
+                L = n + 1 - L;
                 b = d;
                 m = 1;
-            } else {
-                m++;
+            }else {
+                m ++;
             }
         }
         return new FieldPolynomial(field, Arrays.copyOf(C, L + 1));

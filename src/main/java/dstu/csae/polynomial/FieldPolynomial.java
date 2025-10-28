@@ -43,6 +43,11 @@ public class FieldPolynomial extends Polynomial {
         return FieldPolynomialOperations.evaluation(this, x);
     }
 
+    public FieldPolynomial set(int degree, int coefficient){
+        coefficient = field.bringToField(coefficient);
+        return new FieldPolynomial(field, super.set(degree, coefficient).getCoefficients());
+    }
+
     public FieldPolynomial add(@NonNull FieldPolynomial polynomial){
         return FieldPolynomialOperations.addition(this, polynomial);
     }

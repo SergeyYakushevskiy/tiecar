@@ -1,4 +1,4 @@
-package dstu.csae.rs_code;
+package dstu.csae.rscode;
 
 import dstu.csae.code.Code;
 import dstu.csae.galois.extended.GaloisFieldExtension;
@@ -65,7 +65,7 @@ public class RSCode implements Code<FieldPolynomial> {
 
     private Polynomial setH(GaloisFieldExtension field, int r, Integer alpha){
         FieldPolynomial h = new FieldPolynomial(field, n - r);
-        h.set(0, 1);
+        h = h.set(0, 1);
         for(int i = 0; i <= n - 1; i ++){
             if(i > 0 && i <= r){
                 continue;
@@ -81,6 +81,6 @@ public class RSCode implements Code<FieldPolynomial> {
 
     @Override
     public String toString() {
-        return "RSCode(" + n + "," + k + "), " + field;
+        return "(" + n + ", " + k + ") " + field;
     }
 }

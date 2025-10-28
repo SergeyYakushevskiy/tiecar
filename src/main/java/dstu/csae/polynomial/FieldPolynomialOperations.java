@@ -81,12 +81,12 @@ public class FieldPolynomialOperations {
 
     static int evaluation(@NonNull FieldPolynomial polynomial, int x){
         GaloisFieldExtension field = polynomial.getField();
-        return evaluation(field, polynomial.coefficients, x);
+        return evaluation(field, polynomial.getCoefficients(), x);
     }
 
     static FieldPolynomial interpolation(@NonNull int[] x, @NonNull FieldPolynomial y){
         GaloisFieldExtension field = y.getField();
-        return new FieldPolynomial(field, interpolation(field, x, y.coefficients));
+        return new FieldPolynomial(field, interpolation(field, x, y.getCoefficients()));
     }
 
     protected static  int[] addition(GaloisFieldExtension field, int[] first, int[] second){

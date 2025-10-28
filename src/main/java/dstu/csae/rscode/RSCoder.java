@@ -1,55 +1,56 @@
-package dstu.csae.rs_code;
+package dstu.csae.rscode;
 
 import dstu.csae.codec.Codec;
-import dstu.csae.galois.GaloisField;
 import dstu.csae.galois.extended.GaloisFieldExtension;
 import dstu.csae.polynomial.FieldPolynomial;
 import dstu.csae.utils.BerlekampMassey;
 import dstu.csae.utils.Chien;
 import dstu.csae.utils.Forney;
+import lombok.NonNull;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
+public class RSCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
 
-public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
-
-
-    public RSFCoder(RSCode code) {
+    public RSCoder(RSCode code){
         super(code);
     }
 
     @Override
-    public FieldPolynomial encode(FieldPolynomial input)
+    public FieldPolynomial encode(@NonNull FieldPolynomial input)
             throws IllegalArgumentException{
         int k = code.getK();
         if(input.getDegree() >= k){
             throw new IllegalArgumentException(String.format(
-                "Степень полинома %s должна быть меньше k = %d", input, k
+                    "Степень полинома %s должна быть меньше значения k = %d",
+                    input,k
             ));
         }
-        int n = code.getN();
+        int r = code.getR();
         GaloisFieldExtension field = code.getField();
-        int alpha = code.getAlpha();
-        int[] encoded = new int[n];
-        for(int i = 0; i < n; i ++){
-            int power = field.powMod(alpha, i);
-            encoded[i] = input.evaluate(power);
+        FieldPolynomial generator = new FieldPolynomial(field, code.getG().getCoefficients());
+
+        FieldPolynomial shifted = new FieldPolynomial(field, input.getDegree() + r);
+        for (int i = 0; i <= input.getDegree(); i++) {
+            shifted.set(i + r, input.get(i));
         }
-        FieldPolynomial output = new FieldPolynomial(field, encoded);
-        return output;
+        FieldPolynomial remainder = shifted.mod(generator);
+        FieldPolynomial multiple = shifted.add(remainder);
+        return multiple;
     }
 
     @Override
-    public FieldPolynomial decode(FieldPolynomial input)
+    public FieldPolynomial decode(@NonNull FieldPolynomial input)
             throws IllegalArgumentException{
+        GaloisFieldExtension field = code.getField();
         int n = code.getN();
         if(input.getDegree() >= n){
             throw new IllegalArgumentException(String.format(
                     "Степень полинома %s долна быть меньше n = %d", input, n
             ));
         }
-        GaloisFieldExtension field = input.getField();
         int[] syndromes = computeSyndromes(input);
         boolean allZero = true;
         for (int s : syndromes) {
@@ -58,9 +59,9 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
                 break;
             }
         }
+
         if (allZero) {
-            FieldPolynomial output = getInformationalCoefficients(input);
-            return output;
+            return getInformationalCoefficients(input);
         }
         FieldPolynomial errorLocatorPolynomial = BerlekampMassey.findErrorLocatorPolynomial(field, syndromes);
         int[] errorPositions = Chien.findErrorPositions(code, errorLocatorPolynomial);
@@ -71,28 +72,18 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
                 errorPositions
         );
         input = correctErrors(input, errorPositions, errorValues);
-        FieldPolynomial output = getInformationalCoefficients(input);
-        return output;
+        return getInformationalCoefficients(input);
     }
 
     private FieldPolynomial getInformationalCoefficients(FieldPolynomial received){
-        GaloisFieldExtension fieldExtension = received.getField();
-        GaloisField field = fieldExtension.getGaloisField();
-        int n = code.getN();
+        GaloisFieldExtension field = received.getField();
         int k = code.getK();
-        int alpha = code.getAlpha();
-        int invAlpha = fieldExtension.inverseOfMultiplication(alpha);
-        int invN = field.inverseOfMultiplication(field.bringToField(n));
-        int[] decoded = new int[n];
-
-        for(int i = 0; i < k; i ++){
-            for(int j = 0; j < n; j ++){
-                int alphaInDeg = fieldExtension.powMod(invAlpha, i * j);
-                decoded[i] = fieldExtension.add(decoded[i], fieldExtension.multiply(received.get(j), alphaInDeg));
-            }
-            decoded[i] = fieldExtension.multiply(decoded[i], invN);
-        }
-        return new FieldPolynomial(fieldExtension, decoded);
+        int n = code.getN();
+        FieldPolynomial decoded = new FieldPolynomial(field, k);
+        int[] informationCoefficients = Arrays.copyOfRange(received.getCoefficients(), n - k, n);
+        IntStream.range(0, informationCoefficients.length)
+                .forEach(index -> decoded.set(index, informationCoefficients[index]));
+        return decoded;
     }
 
     private int[] computeSyndromes(FieldPolynomial received) {
@@ -100,14 +91,16 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
         int r = code.getR();
         int[] syndromes = new int[r];
         int alpha = code.getAlpha();
+
         for (int i = 1; i <= r; i++) {
             int power = field.powMod(alpha, i);
             syndromes[i - 1] = received.evaluate(power);
         }
+
         return syndromes;
     }
 
-    private FieldPolynomial correctErrors(FieldPolynomial received,
+    public FieldPolynomial correctErrors(FieldPolynomial received,
                                          int[] errorPositions,
                                          int[] errorValues) {
         GaloisFieldExtension field = code.getField();
@@ -125,11 +118,10 @@ public class RSFCoder extends Codec<RSCode, FieldPolynomial, FieldPolynomial> {
         return new FieldPolynomial(field, corrected);
     }
 
-
     @Override
     public String toString() {
         return String.join("\n", List.of(
-                "RSFCoder",
+                "RSCoder",
                 code.toString(),
                 "α(x) = " + code.getField().get(code.getAlpha()),
                 "g(x) = " + code.getG(),
